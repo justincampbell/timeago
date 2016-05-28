@@ -1,11 +1,10 @@
 package timeago
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/justincampbell/bigduration"
 )
 
 func Test_FromDuration(t *testing.T) {
@@ -52,7 +51,10 @@ func Test_FromDuration(t *testing.T) {
 	}
 
 	for input, expected := range cases {
-		d := parseDuration(t, input)
+		d, err := bigduration.ParseDuration(input)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if v := FromDuration(d); v != expected {
 			t.Fatalf("for %#v, expected %#v, but got %#v", input, expected, v)
@@ -73,7 +75,11 @@ func Test_FromTime(t *testing.T) {
 	}
 
 	for input, expected := range futureCases {
-		d := parseDuration(t, input)
+		d, err := bigduration.ParseDuration(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		if v := FromTime(time.Now().Add(d)); v != expected {
 			t.Fatalf("for %#v, expected %#v, but got %#v", input, expected, v)
 		}
@@ -86,46 +92,13 @@ func Test_FromTime(t *testing.T) {
 	}
 
 	for input, expected := range pastCases {
-		d := parseDuration(t, input)
+		d, err := bigduration.ParseDuration(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		if v := FromTime(time.Now().Add(-d)); v != expected {
 			t.Fatalf("for %#v, expected %#v, but got %#v", input, expected, v)
 		}
 	}
-}
-
-func parseDuration(t *testing.T, s string) time.Duration {
-	s, years := splitDuration(t, s, "Y")
-	s, months := splitDuration(t, s, "M")
-	s, days := splitDuration(t, s, "D")
-
-	minutes := years*year + months*month + days*day
-
-	add, err := time.ParseDuration(fmt.Sprintf("%0dm", minutes))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if s == "" {
-		return add
-	}
-
-	d, err := time.ParseDuration(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return d + add
-}
-
-func splitDuration(t *testing.T, s string, delim string) (string, int) {
-	elems := strings.Split(s, delim)
-	if len(elems) == 2 {
-		i64, err := strconv.ParseInt(elems[0], 10, 64)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return elems[len(elems)-1], int(i64)
-	}
-
-	return s, 0
 }
